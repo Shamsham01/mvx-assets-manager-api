@@ -3,6 +3,18 @@
 import { exit, argv } from 'process';
 import chalk from 'chalk';
 import packageJson from '../package.json';
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
+import { rateLimit } from 'express-rate-limit';
+import { configService } from './config/config.service';
+import { walletManager } from './utils/wallet';
+import { securityMiddleware } from './middleware/security.middleware';
+import { swaggerSpec } from './config/swagger';
+import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import { requestLogger } from './utils/logger';
+import logger from './utils/logger';
 
 import { derivePem } from './derive-pem';
 import { init } from './init';
@@ -38,6 +50,99 @@ import { changePropertiesSft } from './sft/change-properties-sft';
 import { changePropertiesMetaEsdt } from './meta-esdt/change-properties-meta-esdt';
 import { decodeTransaction } from './decode-transaction';
 import { multiTransfer } from './multi-transfer';
+
+// Import routes
+import esdtRoutes from './routes/esdt.routes';
+import nftRoutes from './routes/nft.routes';
+import sftRoutes from './routes/sft.routes';
+import metaEsdtRoutes from './routes/meta-esdt.routes';
+import utilsRoutes from './routes/utils.routes';
+import accountRoutes from './routes/account.routes';
+import authRoutes from './routes/auth.routes';
+
+// Load environment variables
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(express.json());
+app.use(cors());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
+
+// API Key middleware
+const apiKeyAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey || apiKey !== process.env.API_KEY) {
+    return res.status(401).json({
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED',
+        message: 'Invalid API key'
+      }
+    });
+  }
+  next();
+};
+
+// Add request logging
+app.use(requestLogger);
+
+// Routes
+app.use('/authorization', authRoutes);
+app.use('/api/v1/esdt', securityMiddleware, esdtRoutes);
+app.use('/api/v1/nft', securityMiddleware, nftRoutes);
+app.use('/api/v1/sft', securityMiddleware, sftRoutes);
+app.use('/api/v1/meta-esdt', securityMiddleware, metaEsdtRoutes);
+app.use('/api/v1/utils', securityMiddleware, utilsRoutes);
+app.use('/api/v1/account', securityMiddleware, accountRoutes);
+
+// Swagger documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Handle 404 errors
+app.use(notFoundHandler);
+
+// Error handling middleware
+app.use(errorHandler);
+
+// Initialize wallet and start server
+const startServer = async () => {
+  try {
+    await walletManager.initialize();
+    
+    app.listen(PORT, () => {
+      logger.info(`Server running on port ${PORT}`);
+      logger.info(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
+      logger.info(`Environment: ${configService.getEnvironment()}`);
+      logger.info(`Network: ${configService.getNetwork().chainId === 'T' ? 'Testnet' : 'Mainnet'}`);
+    });
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection:', { reason, promise });
+  process.exit(1);
+});
+
+startServer();
 
 interface CommandData {
   name: string;
