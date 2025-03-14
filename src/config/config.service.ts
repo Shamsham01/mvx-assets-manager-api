@@ -42,9 +42,10 @@ export class ConfigService {
       environment: process.env.NODE_ENV || 'development',
       network: {
         chainId: process.env.CHAIN === 'mainnet' ? '1' : 'T',
-        minGasLimit: 50000,
-        minGasPrice: 1000000000,
-        gasPerDataByte: 1500
+        ChainID: process.env.CHAIN === 'mainnet' ? '1' : 'T',
+        MinGasLimit: 50000,
+        MinGasPrice: 1000000000,
+        GasPerDataByte: 1500
       },
       apiProvider: process.env.API_PROVIDER || 'https://api.multiversx.com',
       port: parseInt(process.env.PORT || '3000', 10),

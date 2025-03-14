@@ -9,7 +9,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "deploy": "bash -c \"mkdir -p build && find src -name '*.ts' -exec cp {} build/ \\; && find build -name '*.ts' -exec bash -c 'mv \"{}\" \"\\${0%.ts}.js\"' {} \\;\""
   },
   "dependencies": {
     "@multiversx/sdk-core": "^12.18.1",

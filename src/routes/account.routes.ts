@@ -9,6 +9,25 @@ import {
 
 const router = express.Router();
 
+// Validation middleware - moved to top before routes
+const validateStoreValue = [
+  body('key').isString().notEmpty(),
+  body('value').isString().notEmpty(),
+];
+
+const validateGetValue = [
+  body('key').isString().notEmpty(),
+];
+
+const validateClaimDevRewards = [
+  body('address').isString().notEmpty(),
+];
+
+const validateChangeOwner = [
+  body('oldOwner').isString().notEmpty(),
+  body('newOwner').isString().notEmpty(),
+];
+
 /**
  * @swagger
  * tags:
@@ -183,25 +202,6 @@ router.post('/claim-rewards', validateClaimDevRewards, (req, res) => handleRespo
  *               $ref: '#/components/schemas/Error'
  */
 router.post('/change-owner', validateChangeOwner, (req, res) => handleResponse(req, res, handleChangeOwner));
-
-// Validation middleware
-const validateStoreValue = [
-  body('key').isString().notEmpty(),
-  body('value').isString().notEmpty(),
-];
-
-const validateGetValue = [
-  body('key').isString().notEmpty(),
-];
-
-const validateClaimDevRewards = [
-  body('address').isString().notEmpty(),
-];
-
-const validateChangeOwner = [
-  body('oldOwner').isString().notEmpty(),
-  body('newOwner').isString().notEmpty(),
-];
 
 // Helper function for error handling
 const handleValidationErrors = (req: express.Request, res: express.Response) => {
