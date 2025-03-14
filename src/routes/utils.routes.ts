@@ -179,6 +179,34 @@ router.post('/herotag', validateHerotag, (req, res) => handleResponse(req, res, 
  */
 router.post('/converters', validateConverters, (req, res) => handleResponse(req, res, handleConverters));
 
+/**
+ * @swagger
+ * /api/v1/utils/health:
+ *   get:
+ *     summary: Health check endpoint
+ *     tags: [Utils]
+ *     responses:
+ *       200:
+ *         description: API is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: healthy
+ *                 timestamp:
+ *                   type: string
+ *                   example: "2024-03-14T12:00:00Z"
+ */
+router.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Validation middleware
 const validateMultiTransfer = [
   body('to').isString().notEmpty(),
