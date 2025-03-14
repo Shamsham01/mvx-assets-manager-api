@@ -3,9 +3,9 @@ services:
     name: my-bulido-api
     env: node
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: npm start
-    nodeVersion: 18
+    nodeVersion: 18.19.1
     envVars:
       # MultiversX Network Configuration
       - key: API_PROVIDER
