@@ -1,147 +1,85 @@
-import { ValidationError } from 'express-validator';
+import { ValidationError } from '../middleware/validation.middleware';
 
-export type ErrorCode =
+export type ErrorCode = 
   | 'VALIDATION_ERROR'
-  | 'CONFIG_ERROR'
-  | 'AUTH_ERROR'
-  | 'NETWORK_ERROR'
-  | 'TRANSACTION_ERROR'
-  | 'WALLET_ERROR'
-  | 'CONTRACT_ERROR'
+  | 'UNAUTHORIZED'
   | 'NOT_FOUND'
-  | 'OPERATION_ERROR'
-  | 'INTERNAL_ERROR';
+  | 'INTERNAL_ERROR'
+  | 'ISSUE_ESDT_ERROR'
+  | 'MINT_BURN_ESDT_ERROR'
+  | 'SEND_ESDT_ERROR'
+  | 'TOGGLE_ROLES_ERROR'
+  | 'FREEZE_UNFREEZE_ERROR'
+  | 'WIPE_ERROR'
+  | 'TRANSFER_OWNERSHIP_ERROR'
+  | 'CHANGE_PROPERTIES_ERROR'
+  | 'ISSUE_NFT_ERROR'
+  | 'CREATE_NFT_ERROR'
+  | 'SEND_NFT_ERROR'
+  | 'ISSUE_SFT_ERROR'
+  | 'CREATE_SFT_ERROR'
+  | 'SEND_SFT_ERROR'
+  | 'ISSUE_META_ESDT_ERROR'
+  | 'CREATE_META_ESDT_ERROR'
+  | 'SEND_META_ESDT_ERROR'
+  | 'MULTI_TRANSFER_ERROR'
+  | 'DECODE_TRANSACTION_ERROR'
+  | 'HEROTAG_ERROR'
+  | 'CONVERTER_ERROR'
+  | 'STORE_VALUE_ERROR'
+  | 'GET_VALUE_ERROR'
+  | 'CLAIM_REWARDS_ERROR'
+  | 'CHANGE_OWNER_ERROR';
 
-export interface ErrorResponse {
-  success: false;
-  error: {
-    code: ErrorCode;
-    message: string;
-    details?: any;
-  };
+export class AppError extends Error {
+  constructor(
+    public code: ErrorCode,
+    message: string
+  ) {
+    super(message);
+    this.name = 'AppError';
+  }
 }
 
-export class ApiError extends Error {
-  public readonly code: ErrorCode;
-  public readonly statusCode: number;
-  public readonly details?: any;
-
-  constructor(code: ErrorCode, message: string, statusCode: number = 500, details?: any) {
-    super(message);
-    this.code = code;
-    this.statusCode = statusCode;
-    this.details = details;
-    this.name = 'ApiError';
+export class AuthError extends AppError {
+  constructor(message: string) {
+    super('UNAUTHORIZED', message);
+    this.name = 'AuthError';
   }
+}
 
-  public static fromValidationErrors(errors: ValidationError[]): ApiError {
-    return new ApiError(
-      'VALIDATION_ERROR',
-      'Invalid request parameters',
-      400,
-      errors.map(error => ({
-        field: error.param,
-        message: error.msg,
-        value: error.value
-      }))
-    );
-  }
-
-  public static notFound(resource: string): ApiError {
-    return new ApiError(
-      'NOT_FOUND',
-      `${resource} not found`,
-      404
-    );
-  }
-
-  public static unauthorized(message: string = 'Unauthorized'): ApiError {
-    return new ApiError(
-      'AUTH_ERROR',
-      message,
-      401
-    );
-  }
-
-  public static forbidden(message: string = 'Forbidden'): ApiError {
-    return new ApiError(
-      'AUTH_ERROR',
-      message,
-      403
-    );
-  }
-
-  public toResponse(): ErrorResponse {
+export const handleError = (error: unknown) => {
+  if (error instanceof AppError) {
     return {
       success: false,
       error: {
-        code: this.code,
-        message: this.message,
-        ...(this.details && { details: this.details })
+        code: error.code,
+        message: error.message
       }
     };
   }
-}
 
-export const errorStatusCodes: Record<ErrorCode, number> = {
-  VALIDATION_ERROR: 400,
-  CONFIG_ERROR: 500,
-  AUTH_ERROR: 401,
-  NETWORK_ERROR: 503,
-  TRANSACTION_ERROR: 400,
-  WALLET_ERROR: 500,
-  CONTRACT_ERROR: 400,
-  NOT_FOUND: 404,
-  OPERATION_ERROR: 400,
-  INTERNAL_ERROR: 500
-};
-
-export class TransactionError extends ApiError {
-  constructor(message: string, details?: any) {
-    super('TRANSACTION_ERROR', message, 400, details);
-    this.name = 'TransactionError';
-  }
-}
-
-export class WalletError extends ApiError {
-  constructor(message: string, details?: any) {
-    super('WALLET_ERROR', message, 400, details);
-    this.name = 'WalletError';
-  }
-}
-
-export class ContractError extends ApiError {
-  constructor(message: string, details?: any) {
-    super('CONTRACT_ERROR', message, 400, details);
-    this.name = 'ContractError';
-  }
-}
-
-export class NetworkError extends ApiError {
-  constructor(message: string, details?: any) {
-    super('NETWORK_ERROR', message, 503, details);
-    this.name = 'NetworkError';
-  }
-}
-
-export const handleError = (error: any) => {
-  if (error instanceof ApiError) {
-    return error;
+  if (Array.isArray(error) && error.length > 0 && 'param' in error[0]) {
+    const validationErrors = error as ValidationError[];
+    return {
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Validation failed',
+        details: validationErrors.map(err => ({
+          param: err.param,
+          msg: err.msg,
+          value: err.value
+        }))
+      }
+    };
   }
 
-  // Handle network errors
-  if (error.isAxiosError) {
-    return new NetworkError(
-      error.response?.data?.message || error.message,
-      error.response?.data
-    );
-  }
-
-  // Handle unexpected errors
-  return new ApiError(
-    'INTERNAL_ERROR',
-    'An unexpected error occurred',
-    500,
-    process.env.NODE_ENV === 'development' ? error : undefined
-  );
+  return {
+    success: false,
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : 'An unexpected error occurred'
+    }
+  };
 }; 

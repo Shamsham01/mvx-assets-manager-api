@@ -1,47 +1,44 @@
-import fs from 'fs';
-import { UserSigner } from '@multiversx/sdk-wallet/out';
-import { WalletError } from './errors';
-import { configService } from '../config/config.service';
+import { UserSigner } from '@multiversx/sdk-wallet';
+import { AppError } from './errors';
 
-class WalletManager {
-  private static instance: WalletManager;
+export class WalletManager {
+  private walletPem: string | null = null;
   private signer: UserSigner | null = null;
 
-  private constructor() {}
-
-  public static getInstance(): WalletManager {
-    if (!WalletManager.instance) {
-      WalletManager.instance = new WalletManager();
-    }
-    return WalletManager.instance;
+  public initialize(): void {
+    // Initialize wallet manager
+    this.walletPem = null;
+    this.signer = null;
   }
 
-  public async initialize() {
-    const { pemFilePath } = configService.getConfig();
-    
-    if (!pemFilePath) {
-      throw new WalletError('PEM file path not configured');
-    }
-
+  public setWalletPem(pem: string): void {
     try {
-      const pemContent = await fs.promises.readFile(pemFilePath, { encoding: 'utf-8' });
-      this.signer = UserSigner.fromPem(pemContent);
-    } catch (error: any) {
-      throw new WalletError(`Failed to load PEM file: ${error.message}`);
+      const signer = UserSigner.fromPem(pem);
+      this.walletPem = pem;
+      this.signer = signer;
+    } catch (error) {
+      throw new AppError('UNAUTHORIZED', 'Invalid PEM file');
     }
+  }
+
+  public getWalletPem(): string {
+    if (!this.walletPem) {
+      throw new AppError('UNAUTHORIZED', 'No wallet PEM set');
+    }
+    return this.walletPem;
   }
 
   public getSigner(): UserSigner {
     if (!this.signer) {
-      throw new WalletError('Wallet not initialized');
+      throw new AppError('UNAUTHORIZED', 'No signer available');
     }
     return this.signer;
   }
 
-  public getAddress(): string {
-    return this.getSigner().getAddress().bech32();
+  public clear(): void {
+    this.walletPem = null;
+    this.signer = null;
   }
 }
 
-export const walletManager = WalletManager.getInstance();
-export default walletManager; 
+export const walletManager = new WalletManager(); 

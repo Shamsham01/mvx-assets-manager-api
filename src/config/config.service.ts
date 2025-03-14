@@ -1,12 +1,14 @@
+import { NetworkConfig } from '@multiversx/sdk-network-providers';
 import { ApiError } from '../utils/errors';
 import { environmentService } from './environment.config';
 import { pemService } from './pem.config';
 
-export interface NetworkConfig {
-  chainId: string;
-  apiUrl: string;
-  gatewayUrl: string;
-  explorerUrl: string;
+export interface Config {
+  environment: string;
+  network: NetworkConfig;
+  apiProvider: string;
+  port: number;
+  apiKey: string;
 }
 
 export interface SecurityConfig {
@@ -30,61 +32,45 @@ export interface AppConfig {
   pemContent: string;
 }
 
-class ConfigService {
-  private static instance: ConfigService;
-  private config: AppConfig;
+export class ConfigService {
+  private config: Config;
 
-  private constructor() {
-    this.initializeConfig();
-  }
-
-  public static getInstance(): ConfigService {
-    if (!ConfigService.instance) {
-      ConfigService.instance = new ConfigService();
-    }
-    return ConfigService.instance;
-  }
-
-  private initializeConfig() {
-    const env = environmentService.getConfig();
-    const pem = pemService.getConfig();
-    
+  constructor() {
     this.config = {
-      port: parseInt(process.env.PORT || '3000', 10),
-      environment: env.isDevelopment ? 'development' : env.isProduction ? 'production' : 'test',
-      network: this.getNetworkConfig(env.isDevelopment || env.isTest),
-      security: {
-        apiKeyHeader: process.env.API_KEY_HEADER || 'x-api-key',
-        apiKeys: (process.env.API_KEYS || '').split(',').filter(key => key),
-        rateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW || '900000', 10), // 15 minutes
-        rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
-        cors: {
-          enabled: process.env.CORS_ENABLED === 'true',
-          origin: (process.env.CORS_ORIGIN || '*').split(','),
-          methods: (process.env.CORS_METHODS || 'GET,POST').split(',')
-        }
+      environment: process.env.NODE_ENV || 'development',
+      network: {
+        chainId: process.env.CHAIN === 'mainnet' ? '1' : 'T',
+        minGasLimit: 50000,
+        minGasPrice: 1000000000,
+        gasPerDataByte: 1500
       },
-      pemFilePath: pem.pemPath,
-      pemContent: pem.pemContent
+      apiProvider: process.env.API_PROVIDER || 'https://api.multiversx.com',
+      port: parseInt(process.env.PORT || '3000', 10),
+      apiKey: process.env.API_KEY || 'default-key'
     };
   }
 
-  private getNetworkConfig(isTestEnvironment: boolean): NetworkConfig {
-    return {
-      chainId: isTestEnvironment ? 'T' : '1',
-      apiUrl: isTestEnvironment 
-        ? (process.env.TESTNET_API_URL || 'https://testnet-api.multiversx.com')
-        : (process.env.MAINNET_API_URL || 'https://api.multiversx.com'),
-      gatewayUrl: isTestEnvironment
-        ? (process.env.TESTNET_GATEWAY_URL || 'https://testnet-gateway.multiversx.com')
-        : (process.env.MAINNET_GATEWAY_URL || 'https://gateway.multiversx.com'),
-      explorerUrl: isTestEnvironment
-        ? (process.env.TESTNET_EXPLORER_URL || 'https://testnet-explorer.multiversx.com')
-        : (process.env.MAINNET_EXPLORER_URL || 'https://explorer.multiversx.com')
-    };
+  public getEnvironment(): string {
+    return this.config.environment;
   }
 
-  public getConfig(): AppConfig {
+  public getNetwork(): NetworkConfig {
+    return this.config.network;
+  }
+
+  public getApiProvider(): string {
+    return this.config.apiProvider;
+  }
+
+  public getPort(): number {
+    return this.config.port;
+  }
+
+  public getApiKey(): string {
+    return this.config.apiKey;
+  }
+
+  public getConfig(): Config {
     return this.config;
   }
 
@@ -100,9 +86,8 @@ class ConfigService {
 
   public reloadConfig() {
     pemService.reloadPem();
-    this.initializeConfig();
   }
 }
 
-export const configService = ConfigService.getInstance();
+export const configService = new ConfigService();
 export default configService; 
