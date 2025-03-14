@@ -3,30 +3,7 @@ services:
     name: my-bulido-api
     env: node
     plan: free
-    buildCommand: >
-      # Fix dependency versions
-      sed -i 's/\^\([0-9]\+\)\.\([0-9]\+\)\.\([0-9]\+\)/\1.\2.\3/g' package.json &&
-      # Install dependencies
-      npm ci &&
-      # Create build directory
-      mkdir -p build &&
-      # Copy source files to build directory with .js extension
-      find src -name "*.ts" | while read file; do
-        dir=$(dirname "${file#src/}")
-        mkdir -p "build/$dir"
-        cp "$file" "build/${file#src/}.js"
-        # Replace .ts imports with .js
-        sed -i 's/from ..\(.*\)\.ts./from ..\1.js./g' "build/${file#src/}.js"
-        sed -i 's/import \(.*\) from \(.*\)\.ts/import \1 from \2.js/g' "build/${file#src/}.js"
-        # Remove type annotations
-        sed -i 's/: [A-Za-z][A-Za-z0-9_]*//g' "build/${file#src/}.js"
-        sed -i 's/: Array<[A-Za-z][A-Za-z0-9_]*>//g' "build/${file#src/}.js"
-        # Replace all "extends" and "implements" for simple class declarations
-        sed -i 's/extends [A-Za-z][A-Za-z0-9_]*//' "build/${file#src/}.js"
-        sed -i 's/implements [A-Za-z][A-Za-z0-9_]*//' "build/${file#src/}.js"
-      done &&
-      # Copy package.json to build
-      cp package.json build/
+    buildCommand: npm ci && node convert-to-js.js
     startCommand: node build/index.js
     nodeVersion: 18.19.1
     envVars:
