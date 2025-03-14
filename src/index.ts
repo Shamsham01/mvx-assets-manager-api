@@ -122,7 +122,8 @@ const startServer = async () => {
       logger.info(`Server running on port ${PORT}`);
       logger.info(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
       logger.info(`Environment: ${configService.getEnvironment()}`);
-      logger.info(`Network: ${configService.getNetwork().chainId === 'T' ? 'Testnet' : 'Mainnet'}`);
+      const network = configService.getNetwork();
+      logger.info(`Network: ${network.chainId === 'T' || network.ChainID === 'T' ? 'Testnet' : 'Mainnet'}`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error);

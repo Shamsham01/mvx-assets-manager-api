@@ -1,11 +1,12 @@
 import express from 'express';
-import { body, validationResult } from 'express-validator';
+import { body } from 'express-validator';
 import {
   handleMultiTransfer,
   handleDecodeTransaction,
   handleHerotag,
   handleConverters
 } from '../controllers/utils.controller';
+import { handleValidationErrors } from '../middleware/validation.middleware';
 
 const router = express.Router();
 
@@ -15,6 +16,33 @@ const router = express.Router();
  *   name: Utils
  *   description: Utility operations for blockchain interactions
  */
+
+// Validation middleware
+const validateMultiTransfer = [
+  body('to').isString().notEmpty(),
+  body('tokens').isArray(),
+  body('tokens.*.identifier').isString().notEmpty(),
+  body('tokens.*.amount').isString().notEmpty(),
+  body('tokens.*.nonce').optional().isInt({ min: 0 }),
+];
+
+const validateDecodeTransaction = [
+  body('data').isString().notEmpty(),
+  body('sender').isString().notEmpty(),
+  body('receiver').isString().notEmpty(),
+  body('value').optional().isString(),
+];
+
+const validateHerotag = [
+  body('action').isIn(['create', 'check']),
+  body('herotag').optional().isString(),
+  body('address').optional().isString(),
+];
+
+const validateConverters = [
+  body('action').isIn(['bech32ToHex', 'hexToBech32', 'valueToHex', 'hexToValue']),
+  body('value').isString().notEmpty(),
+];
 
 /**
  * @swagger
@@ -64,7 +92,7 @@ const router = express.Router();
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  */
-router.post('/multi-transfer', validateMultiTransfer, (req, res) => handleResponse(req, res, handleMultiTransfer));
+router.post('/multi-transfer', validateMultiTransfer, handleValidationErrors, (req, res) => handleResponse(req, res, handleMultiTransfer));
 
 /**
  * @swagger
@@ -105,7 +133,7 @@ router.post('/multi-transfer', validateMultiTransfer, (req, res) => handleRespon
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  */
-router.post('/decode-transaction', validateDecodeTransaction, (req, res) => handleResponse(req, res, handleDecodeTransaction));
+router.post('/decode-transaction', validateDecodeTransaction, handleValidationErrors, (req, res) => handleResponse(req, res, handleDecodeTransaction));
 
 /**
  * @swagger
@@ -142,7 +170,7 @@ router.post('/decode-transaction', validateDecodeTransaction, (req, res) => hand
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  */
-router.post('/herotag', validateHerotag, (req, res) => handleResponse(req, res, handleHerotag));
+router.post('/herotag', validateHerotag, handleValidationErrors, (req, res) => handleResponse(req, res, handleHerotag));
 
 /**
  * @swagger
@@ -177,7 +205,7 @@ router.post('/herotag', validateHerotag, (req, res) => handleResponse(req, res, 
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  */
-router.post('/converters', validateConverters, (req, res) => handleResponse(req, res, handleConverters));
+router.post('/converters', validateConverters, handleValidationErrors, (req, res) => handleResponse(req, res, handleConverters));
 
 /**
  * @swagger
@@ -207,55 +235,9 @@ router.get('/health', (req, res) => {
   });
 });
 
-// Validation middleware
-const validateMultiTransfer = [
-  body('to').isString().notEmpty(),
-  body('tokens').isArray(),
-  body('tokens.*.identifier').isString().notEmpty(),
-  body('tokens.*.amount').isString().notEmpty(),
-  body('tokens.*.nonce').optional().isInt({ min: 0 }),
-];
-
-const validateDecodeTransaction = [
-  body('data').isString().notEmpty(),
-  body('sender').isString().notEmpty(),
-  body('receiver').isString().notEmpty(),
-  body('value').optional().isString(),
-];
-
-const validateHerotag = [
-  body('action').isIn(['create', 'check']),
-  body('herotag').optional().isString(),
-  body('address').optional().isString(),
-];
-
-const validateConverters = [
-  body('action').isIn(['bech32ToHex', 'hexToBech32', 'valueToHex', 'hexToValue']),
-  body('value').isString().notEmpty(),
-];
-
-// Helper function for error handling
-const handleValidationErrors = (req: express.Request, res: express.Response) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid request parameters',
-        details: errors.array()
-      }
-    });
-  }
-  return null;
-};
-
 // Helper function for response handling
 const handleResponse = async (req: express.Request, res: express.Response, operation: Function) => {
   try {
-    const validationError = handleValidationErrors(req, res);
-    if (validationError) return validationError;
-
     const result = await operation(req.body);
     res.json({
       success: true,
@@ -265,8 +247,8 @@ const handleResponse = async (req: express.Request, res: express.Response, opera
     res.status(500).json({
       success: false,
       error: {
-        code: error.code || 'OPERATION_ERROR',
-        message: error.message
+        code: 'INTERNAL_ERROR',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred'
       }
     });
   }

@@ -5,7 +5,7 @@ export interface ValidationError {
   param: string;
   msg: string;
   value: any;
-  location: string;
+  location?: string;
 }
 
 export const handleValidationErrors = (
@@ -23,8 +23,7 @@ export const handleValidationErrors = (
         details: errors.array().map((error: ExpressValidationError) => ({
           param: error.type === 'field' ? error.path : error.type,
           msg: error.msg,
-          value: error.type === 'field' ? error.value : undefined,
-          location: error.location
+          value: error.type === 'field' ? error.value : undefined
         }))
       }
     });

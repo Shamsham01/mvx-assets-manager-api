@@ -1,5 +1,6 @@
-import { NetworkConfig } from '@multiversx/sdk-network-providers';
-import { ApiError } from '../utils/errors';
+import { NetworkConfig as SdkNetworkConfig } from '@multiversx/sdk-network-providers';
+import { NetworkConfig, normalizeNetworkConfig } from '../types/network';
+import { AppError } from '../utils/errors';
 import { environmentService } from './environment.config';
 import { pemService } from './pem.config';
 
@@ -9,6 +10,7 @@ export interface Config {
   apiProvider: string;
   port: number;
   apiKey: string;
+  security: SecurityConfig;
 }
 
 export interface SecurityConfig {
@@ -46,7 +48,18 @@ export class ConfigService {
       },
       apiProvider: process.env.API_PROVIDER || 'https://api.multiversx.com',
       port: parseInt(process.env.PORT || '3000', 10),
-      apiKey: process.env.API_KEY || 'default-key'
+      apiKey: process.env.API_KEY || 'default-key',
+      security: {
+        apiKeyHeader: process.env.API_KEY_HEADER || 'x-api-key',
+        apiKeys: (process.env.API_KEYS || '').split(',').filter(key => key),
+        rateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW || '900000', 10),
+        rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+        cors: {
+          enabled: process.env.CORS_ENABLED === 'true',
+          origin: (process.env.CORS_ORIGIN || '*').split(','),
+          methods: (process.env.CORS_METHODS || 'GET,POST').split(',')
+        }
+      }
     };
   }
 
@@ -56,6 +69,10 @@ export class ConfigService {
 
   public getNetwork(): NetworkConfig {
     return this.config.network;
+  }
+
+  public getSdkNetwork(): SdkNetworkConfig {
+    return normalizeNetworkConfig(this.config.network);
   }
 
   public getApiProvider(): string {
@@ -70,6 +87,10 @@ export class ConfigService {
     return this.config.apiKey;
   }
 
+  public getSecurity(): SecurityConfig {
+    return this.config.security;
+  }
+
   public getConfig(): Config {
     return this.config;
   }
@@ -78,7 +99,7 @@ export class ConfigService {
     const { security } = this.config;
 
     if (!security.apiKeys.length) {
-      throw new ApiError('CONFIG_ERROR', 'No API keys configured');
+      throw new AppError('INTERNAL_ERROR', 'No API keys configured');
     }
 
     // PEM validation is handled by PemService

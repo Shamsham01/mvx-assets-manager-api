@@ -3,8 +3,11 @@ services:
     name: my-bulido-api
     env: node
     plan: free
-    buildCommand: npm ci && npm run build
-    startCommand: npm start
+    buildCommand: >
+      sed -i 's/\^\([0-9]\+\)\.\([0-9]\+\)\.\([0-9]\+\)/\1.\2.\3/g' package.json &&
+      npm ci &&
+      npx tsc --skipLibCheck
+    startCommand: node build/index.js
     nodeVersion: 18.19.1
     envVars:
       # MultiversX Network Configuration
