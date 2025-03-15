@@ -9,7 +9,9 @@
     "dev": "nodemon index.js",
     "fix": "node fix-js-syntax.js",
     "fix-config": "node fix-config-service.js",
-    "build": "node fix-network-import.js && node fix-js-syntax.js && node fix-config-service.js"
+    "fix-wallet": "node fix-wallet.js",
+    "fix-all": "node fix-all-modules.js",
+    "build": "node fix-all-modules.js"
   },
   "engines": {
     "node": "18.19.1"
