@@ -66,6 +66,16 @@ function convertTsToJs(sourcePath, targetPath) {
   content = content.replace(/minGasPrice/g, 'MinGasPrice');
   content = content.replace(/gasPerDataByte/g, 'GasPerDataByte');
   
+  // Fix package.json import (this causes issues)
+  content = content.replace(/import packageJson from ['"]\.\.\/package\.json['"]/g, 
+    "const packageJson = require('../package.json')");
+  
+  // Fix rate limiting configuration (common issue in index.js)
+  content = content.replace(/windowMs: (\d+) \* (\d+) \* (\d+)/g, (match, p1, p2, p3) => {
+    const result = parseInt(p1) * parseInt(p2) * parseInt(p3);
+    return `windowMs: ${result}`;
+  });
+  
   // Remove TypeScript type annotations
   // Remove type imports
   content = content.replace(/import\s+type\s+.*?from\s+['"].*?['"]/g, '');
@@ -98,6 +108,11 @@ function convertTsToJs(sourcePath, targetPath) {
     return `(${params.replace(/:\s*\w+(\[\])?/g, '').replace(/\s*\?\s*:/g, ':')})`;
   });
   
+  // Add CommonJS module marker to ensure Node treats it as CommonJS
+  if (sourcePath.includes('index.ts')) {
+    content = "// @ts-nocheck\n// CommonJS module\n" + content;
+  }
+  
   // Write the modified content to target file
   fs.writeFileSync(targetPath, content);
 }
@@ -105,7 +120,9 @@ function convertTsToJs(sourcePath, targetPath) {
 // Process the src directory
 processDirectory('src', 'build');
 
-// Copy package.json to build directory
-fs.copyFileSync('package.json', path.join('build', 'package.json'));
+// Copy package.json to build directory with type: commonjs
+const packageJson = require('./package.json');
+packageJson.type = 'commonjs';
+fs.writeFileSync(path.join('build', 'package.json'), JSON.stringify(packageJson, null, 2));
 
 console.log('Conversion complete!'); 

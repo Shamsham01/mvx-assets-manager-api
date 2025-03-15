@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "MultiversX Assets Manager API",
   "main": "build/index.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node build/index.js",
     "build": "node convert-to-js.js",
