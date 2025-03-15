@@ -7,11 +7,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "fix": "node fix-js-syntax.js",
-    "fix-config": "node fix-config-service.js",
-    "fix-wallet": "node fix-wallet.js",
-    "fix-all": "node fix-all-modules.js",
-    "build": "node fix-all-modules.js"
+    "build": "npm ci && node fix-all-modules.js",
+    "fix-all": "node fix-all-modules.js"
   },
   "engines": {
     "node": "18.19.1"

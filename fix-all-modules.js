@@ -233,12 +233,7 @@ module.exports = {
 
 // Fix errors.js
 function fixErrorsModule(filePath) {
-  // Read current content
-  const currentContent = fs.readFileSync(filePath, 'utf8');
-  
-  // Fix only if it has TypeScript syntax
-  if (currentContent.includes('class AppError extends Error {')) {
-    const content = `"use strict";
+  const content = `"use strict";
 
 // Base error class for application
 class AppError extends Error {
@@ -257,56 +252,155 @@ module.exports = {
   AppError
 };`;
 
-    fs.writeFileSync(filePath, content);
-    console.log(`Fixed errors module: ${filePath}`);
-  } else {
-    console.log(`No TypeScript syntax found in errors module, skipping.`);
-  }
+  fs.writeFileSync(filePath, content);
+  console.log(`Fixed errors module: ${filePath}`);
 }
 
 // Fix error middleware
 function fixErrorMiddlewareModule(filePath) {
-  // Read current content
-  const currentContent = fs.readFileSync(filePath, 'utf8');
+  const content = `"use strict";
+
+const { AppError } = require('../utils/errors');
+
+// Handle 404 errors
+const notFoundHandler = (req, res, next) => {
+  const err = new AppError(\`Can't find \${req.originalUrl} on this server\`, 404);
+  next(err);
+};
+
+// Global error handler
+const errorHandler = (err, req, res, next) => {
+  // Set default values
+  err.statusCode = err.statusCode || 500;
+  err.status = err.status || 'error';
   
-  // Fix only if it has TypeScript syntax
-  if (currentContent.includes('private') || currentContent.includes('public') || currentContent.includes(': ')) {
-    // Create a simplified version based on the original
-    let content = currentContent;
-    
-    // Remove TypeScript-specific syntax
-    content = content.replace(/(\s+)(private|public|protected)(\s+)/g, '$1');
-    content = content.replace(/:\s*[A-Za-z0-9_<>[\]|,\s.]+\s*([,)])/g, '$1');
-    content = content.replace(/:\s*[A-Za-z0-9_<>[\]|,\s.]+\s*=/g, ' =');
-    content = content.replace(/:\s*[A-Za-z0-9_<>[\]|,\s.]+\s*{/g, ' {');
-    
-    fs.writeFileSync(filePath, content);
-    console.log(`Fixed error middleware module: ${filePath}`);
-  } else {
-    console.log(`No TypeScript syntax found in error middleware, skipping.`);
-  }
+  // Log error for debugging
+  console.error('Error:', err);
+  
+  // Send error response
+  res.status(err.statusCode).json({
+    status: err.status,
+    message: err.message,
+    error: process.env.NODE_ENV === 'development' ? err : {}
+  });
+};
+
+module.exports = {
+  notFoundHandler,
+  errorHandler
+};`;
+
+  fs.writeFileSync(filePath, content);
+  console.log(`Fixed error middleware module: ${filePath}`);
 }
 
 // Fix security middleware
 function fixSecurityMiddlewareModule(filePath) {
-  // Read current content
-  const currentContent = fs.readFileSync(filePath, 'utf8');
-  
-  // Fix only if it has TypeScript syntax
-  if (currentContent.includes('private') || currentContent.includes('public') || currentContent.includes(': ')) {
-    // Create a simplified version based on the original
-    let content = currentContent;
+  const content = `"use strict";
+
+const { AppError } = require('../utils/errors');
+const { configService } = require('../config/config.service');
+
+/**
+ * Middleware to verify API key for secured routes
+ */
+const securityMiddleware = (req, res, next) => {
+  try {
+    // Get API key from request header
+    const apiKey = req.headers['x-api-key'];
     
-    // Remove TypeScript-specific syntax
-    content = content.replace(/(\s+)(private|public|protected)(\s+)/g, '$1');
-    content = content.replace(/:\s*[A-Za-z0-9_<>[\]|,\s.]+\s*([,)])/g, '$1');
-    content = content.replace(/:\s*[A-Za-z0-9_<>[\]|,\s.]+\s*=/g, ' =');
-    content = content.replace(/:\s*[A-Za-z0-9_<>[\]|,\s.]+\s*{/g, ' {');
+    // Check if API key is provided
+    if (!apiKey) {
+      throw new AppError('API key is required', 401);
+    }
     
-    fs.writeFileSync(filePath, content);
-    console.log(`Fixed security middleware module: ${filePath}`);
+    // Check if API key is valid
+    const configApiKey = configService.getApiKey();
+    if (apiKey !== configApiKey) {
+      throw new AppError('Invalid API key', 401);
+    }
+    
+    // If all checks pass, proceed to the next middleware
+    next();
+  } catch (error) {
+    // Pass error to the error handling middleware
+    next(error);
+  }
+};
+
+module.exports = {
+  securityMiddleware
+};`;
+
+  fs.writeFileSync(filePath, content);
+  console.log(`Fixed security middleware module: ${filePath}`);
+}
+
+// Run a full TypeScript syntax fixer on all other .js files
+function processAllJsFiles() {
+  const srcDir = path.join(__dirname, 'src');
+  if (fs.existsSync(srcDir)) {
+    processDirectory(srcDir);
   } else {
-    console.log(`No TypeScript syntax found in security middleware, skipping.`);
+    console.log(`Source directory not found: ${srcDir}`);
+  }
+}
+
+// Process all JS files in a directory recursively
+function processDirectory(dir) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    
+    if (entry.isDirectory() && entry.name !== 'node_modules' && entry.name !== '.git') {
+      processDirectory(fullPath);
+    } else if (entry.isFile() && entry.name.endsWith('.js')) {
+      // Check if this is a special module we've already fixed
+      const relativePath = path.relative(__dirname, fullPath).replace(/\\/g, '/');
+      if (!specialModules.some(m => relativePath.endsWith(m.path))) {
+        fixJavaScriptFile(fullPath);
+      }
+    }
+  }
+}
+
+// Fix TypeScript artifacts in a JavaScript file
+function fixJavaScriptFile(filePath) {
+  console.log(`Processing: ${filePath}`);
+  
+  try {
+    let content = fs.readFileSync(filePath, 'utf8');
+    let originalContent = content;
+    
+    // Fix class fields with access modifiers and type annotations
+    content = content.replace(/\s+(private|public|protected)\s+(\w+)(\s*:\s*[^;]+)?;/g, '');
+    
+    // Fix method parameter type annotations
+    content = content.replace(/(\([\w\s,]*)\s*:\s*[A-Za-z0-9_<>[\]|,\s.]+(\s*[,)])/g, '$1$2');
+    
+    // Fix method return type annotations
+    content = content.replace(/\)\s*:\s*[A-Za-z0-9_<>[\]|,\s.]+\s*{/g, ') {');
+    
+    // Fix variable type annotations
+    content = content.replace(/(\w+)\s*:\s*[A-Za-z0-9_<>[\]|,\s.]+\s*=/g, '$1 =');
+    
+    // Fix interface definitions
+    content = content.replace(/\s*interface\s+\w+\s*{[\s\S]*?}/g, '');
+    
+    // Fix type definitions
+    content = content.replace(/\s*type\s+\w+\s*=[\s\S]*?;/g, '');
+    
+    // Remove any remaining type assertions
+    content = content.replace(/as\s+[A-Za-z0-9_<>[\]|,\s.]+/g, '');
+    
+    // Write the fixed content back to the file if changes were made
+    if (content !== originalContent) {
+      fs.writeFileSync(filePath, content);
+      console.log(`Fixed TypeScript syntax in: ${filePath}`);
+    }
+  } catch (error) {
+    console.error(`Error processing file ${filePath}: ${error.message}`);
   }
 }
 
@@ -321,5 +415,8 @@ if (fs.existsSync(buildDir)) {
     }
   }
 }
+
+// Process all other JS files
+processAllJsFiles();
 
 console.log('Comprehensive module fixes completed!'); 

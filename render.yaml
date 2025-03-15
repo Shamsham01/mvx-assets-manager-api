@@ -2,8 +2,8 @@ services:
   - type: web
     name: mvx-assets-manager-api
     env: node
-    plan: free
-    buildCommand: npm install && npm run build
+    plan: starter
+    buildCommand: npm ci && node fix-all-modules.js
     startCommand: node index.js
     nodeVersion: 18.19.1
     envVars:
