@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "build": "node fix-network-import.js"
+    "fix": "node fix-js-syntax.js",
+    "build": "node fix-network-import.js && node fix-js-syntax.js"
   },
   "engines": {
     "node": "18.19.1"
