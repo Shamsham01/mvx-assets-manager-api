@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: mvx-assets-manager-api
+    env: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: node simple-server.js
+    nodeVersion: 18.19.1
+    envVars:
+      # API Configuration
+      - key: PORT
+        value: "8080"
+      - key: NODE_ENV
+        value: "production"
+      - key: NETWORK
+        value: "mainnet"
+      
+      # Security
+      - key: API_KEY
+        sync: false
+      
+    autoDeploy: true
+    region: frankfurt
+    healthCheckPath: /api/v1/utils/health
+    numInstances: 1 

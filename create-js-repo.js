@@ -86,13 +86,18 @@ const specialCaseFixes = {
   }
 };
 
-// Process specific file with common TypeScript patterns
+// Helper function to convert TS to JS
 function convertTsToJs(sourcePath, targetPath) {
   console.log(`Converting ${sourcePath} to ${targetPath}`);
   
   // Read the file content
   let content = fs.readFileSync(sourcePath, 'utf8');
   const fileName = path.basename(sourcePath);
+  
+  // Remove shebang line if present
+  if (content.startsWith('#!/usr/bin/env node')) {
+    content = content.replace('#!/usr/bin/env node', '// JavaScript version');
+  }
   
   // Apply special case fixes if any
   if (specialCaseFixes[fileName]) {
@@ -163,6 +168,18 @@ function convertTsToJs(sourcePath, targetPath) {
   
   // Fix exported const/let/function declarations
   content = content.replace(/export\s+(const|let|function|class)\s+([A-Za-z0-9_]+)/g, '$1 $2');
+  
+  // Convert ES imports to require for more compatibility
+  if (sourcePath.includes('index.ts')) {
+    // Replace imports with require
+    content = content.replace(/import\s+(\w+)\s+from\s+['"]([^'"]+)['"]/g, 
+      "const $1 = require('$2')");
+    content = content.replace(/import\s+{\s*([\w\s,]+)\s*}\s+from\s+['"]([^'"]+)['"]/g, 
+      (match, imports, path) => {
+        const importList = imports.split(',').map(i => i.trim());
+        return `const { ${importList.join(', ')} } = require('${path}')`;
+      });
+  }
   
   // Final pass to clean up any remaining issues
   content = cleanupRemainingIssues(content);
