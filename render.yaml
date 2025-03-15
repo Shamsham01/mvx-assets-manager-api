@@ -3,7 +3,11 @@ services:
     name: mvx-assets-manager-api
     env: node
     plan: starter
-    buildCommand: npm ci && node fix-all-modules.js
+    buildCommand: |
+      npm ci && 
+      node scan-typescript-syntax.js &&
+      node fix-all-modules.js &&
+      node fix-index.js
     startCommand: node index.js
     nodeVersion: 18.19.1
     envVars:
@@ -15,6 +19,8 @@ services:
         sync: false
       - key: CHAIN
         value: testnet
+      - key: NODE_ENV
+        value: production
     autoDeploy: true
     region: frankfurt
     healthCheckPath: /api/v1/utils/health

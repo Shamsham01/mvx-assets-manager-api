@@ -8,7 +8,9 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "build": "npm ci && node fix-all-modules.js",
-    "fix-all": "node fix-all-modules.js"
+    "fix-all": "node fix-all-modules.js",
+    "scan-ts": "node scan-typescript-syntax.js",
+    "safe-deploy": "node safe-deploy.js"
   },
   "engines": {
     "node": "18.19.1"

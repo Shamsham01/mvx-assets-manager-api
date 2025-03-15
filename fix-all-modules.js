@@ -31,6 +31,10 @@ const specialModules = [
   {
     path: 'src/middleware/security.middleware.js',
     fix: fixSecurityMiddlewareModule
+  },
+  {
+    path: 'src/utils/logger.js',
+    fix: fixLoggerModule
   }
 ];
 
@@ -336,6 +340,110 @@ module.exports = {
   console.log(`Fixed security middleware module: ${filePath}`);
 }
 
+// Fix logger.js
+function fixLoggerModule(filePath) {
+  const content = `"use strict";
+
+const winston = require('winston');
+const { format, transports, createLogger } = winston;
+
+// Define log format
+const logFormat = format.combine(
+  format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  format.errors({ stack: true }),
+  format.splat(),
+  format.json()
+);
+
+// Create the logger
+const logger = createLogger({
+  format: logFormat,
+  defaultMeta: { service: 'mvx-assets-manager-api' },
+  transports: [
+    // Write to console
+    new transports.Console({
+      format: format.combine(
+        format.colorize(),
+        format.printf(info => {
+          const { timestamp, level, message, ...rest } = info;
+          const meta = Object.keys(rest).length ? JSON.stringify(rest) : '';
+          return \`\${timestamp} [\${level}]: \${message} \${meta}\`;
+        })
+      )
+    }),
+    // Write all logs with level 'error' and below to error.log
+    new transports.File({ 
+      filename: 'logs/error.log', 
+      level: 'error',
+      maxsize: 5242880, // 5MB
+      maxFiles: 5
+    }),
+    // Write all logs to combined.log
+    new transports.File({ 
+      filename: 'logs/combined.log',
+      maxsize: 5242880, // 5MB
+      maxFiles: 5
+    })
+  ]
+});
+
+// If we're in development, also log to the console with simpler formatting
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new transports.Console({
+    format: format.combine(
+      format.colorize(),
+      format.simple()
+    )
+  }));
+}
+
+// Helper methods
+const logInfo = (message, meta = {}) => {
+  logger.info(message, meta);
+};
+
+const logWarning = (message, meta = {}) => {
+  logger.warn(message, meta);
+};
+
+const logError = (error, req = null) => {
+  const meta = {};
+  
+  if (req) {
+    meta.url = req.originalUrl;
+    meta.method = req.method;
+    meta.ip = req.ip;
+    meta.user = req.user || 'anonymous';
+  }
+  
+  if (error instanceof Error) {
+    logger.error(error.message, {
+      ...meta,
+      stack: error.stack,
+      name: error.name
+    });
+  } else {
+    logger.error(error, meta);
+  }
+};
+
+const logDebug = (message, meta = {}) => {
+  logger.debug(message, meta);
+};
+
+// Export the logger and helper methods
+module.exports = {
+  logger,
+  logInfo,
+  logWarning,
+  logError,
+  logDebug
+};`;
+
+  fs.writeFileSync(filePath, content);
+  console.log(`Fixed logger module: ${filePath}`);
+}
+
 // Run a full TypeScript syntax fixer on all other .js files
 function processAllJsFiles() {
   const srcDir = path.join(__dirname, 'src');
@@ -373,6 +481,9 @@ function fixJavaScriptFile(filePath) {
     let content = fs.readFileSync(filePath, 'utf8');
     let originalContent = content;
     
+    // Fix optional parameters (req?: any) => (req = null)
+    content = content.replace(/(\([\w\s,]*\w+)\s*\?\s*:\s*[A-Za-z0-9_<>[\]|,\s.]+(\s*[,)])/g, '$1 = null$2');
+    
     // Fix class fields with access modifiers and type annotations
     content = content.replace(/\s+(private|public|protected)\s+(\w+)(\s*:\s*[^;]+)?;/g, '');
     
@@ -391,8 +502,17 @@ function fixJavaScriptFile(filePath) {
     // Fix type definitions
     content = content.replace(/\s*type\s+\w+\s*=[\s\S]*?;/g, '');
     
+    // Fix enum definitions
+    content = content.replace(/\s*enum\s+\w+\s*{[\s\S]*?}/g, '');
+    
     // Remove any remaining type assertions
     content = content.replace(/as\s+[A-Za-z0-9_<>[\]|,\s.]+/g, '');
+    
+    // Fix type imports
+    content = content.replace(/import\s+{\s*(.*?)type\s+(.*?)}\s+from/g, 'import { $1$2 } from');
+    
+    // Remove generic type parameters
+    content = content.replace(/<[A-Za-z0-9_,\s]+>/g, '');
     
     // Write the fixed content back to the file if changes were made
     if (content !== originalContent) {
