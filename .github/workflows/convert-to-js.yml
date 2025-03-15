@@ -26,7 +26,7 @@ jobs:
 
       - name: Create conversion script
         run: |
-          cat > convert.js << 'EOL'
+          cat > convert.js << 'EOF'
           const fs = require('fs');
           const path = require('path');
           const { execSync } = require('child_process');
@@ -220,14 +220,7 @@ jobs:
             if (fs.existsSync('src/index.ts') && !fs.existsSync('index.js')) {
               console.log('Creating root index.js...');
               
-              const indexContent = `"use strict";
-
-// Load the app
-const { app } = require('./src/index.js');
-
-// Export the app
-module.exports = app;
-`;
+              const indexContent = '"use strict";\n\n// Load the app\nconst { app } = require(\'./src/index.js\');\n\n// Export the app\nmodule.exports = app;';
               fs.writeFileSync('index.js', indexContent);
             }
           }
@@ -251,7 +244,7 @@ module.exports = app;
           ensureIndexJs();
           
           console.log('Conversion complete!');
-          EOL
+          EOF
 
       - name: Run conversion script
         run: node convert.js
