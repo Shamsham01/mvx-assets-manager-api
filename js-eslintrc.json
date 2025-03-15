@@ -1,12 +1,11 @@
 {
   "env": {
     "node": true,
-    "commonjs": true,
-    "es2021": true
+    "es6": true
   },
   "extends": ["eslint:recommended"],
   "parserOptions": {
-    "ecmaVersion": 2022
+    "ecmaVersion": 2020
   },
   "rules": {
     "no-console": "warn",
