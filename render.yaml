@@ -1,52 +1,20 @@
 services:
   - type: web
-    name: my-bulido-api
+    name: mvx-assets-manager-api
     env: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm install && node fix-network-import.js
     startCommand: node index.js
     nodeVersion: 18.19.1
     envVars:
-      # Node.js Configuration (force CommonJS)
-      - key: NODE_ENV
-        value: "production"
-      - key: NODE_OPTIONS
-        value: "--no-warnings --experimental-modules --experimental-json-modules"
-      
-      # MultiversX Network Configuration
-      - key: API_PROVIDER
-        value: "https://api.multiversx.com"
-      - key: CHAIN
-        value: "mainnet"
-      - key: NETWORK
-        value: "mainnet"
-      
-      # Security
+      - key: PORT
+        value: 3000
       - key: API_KEY
         sync: false
-      - key: SECURE_TOKEN
+      - key: PRIVATE_KEY
         sync: false
-      
-      # Token Configuration
-      - key: REWARD_TOKEN
-        value: "REWARD-cf6eac"
-      - key: TREASURY_WALLET
-        value: "erd158k2c3aserjmwnyxzpln24xukl2fsvlk9x46xae4dxl5xds79g6sdz37qn"
-      
-      # API Configuration
-      - key: PORT
-        value: "8080"
-      
-      # Rate Limiting
-      - key: RATE_LIMIT_WINDOW
-        value: "900000" # 15 minutes in milliseconds
-      - key: RATE_LIMIT_MAX
-        value: "100"    # Maximum 100 requests per window
-      
-      # Logging
-      - key: LOG_LEVEL
-        value: "info"
-      
+      - key: CHAIN
+        value: testnet
     autoDeploy: true
     region: frankfurt
     healthCheckPath: /api/v1/utils/health
