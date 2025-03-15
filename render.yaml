@@ -3,7 +3,7 @@ services:
     name: mvx-simple-api
     env: node
     plan: starter
-    buildCommand: npm ci
+    buildCommand: npm ci && npm run build
     startCommand: node index.js
     nodeVersion: 18.x
     envVars:
