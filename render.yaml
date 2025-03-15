@@ -3,8 +3,8 @@ services:
     name: my-bulido-api
     env: node
     plan: free
-    buildCommand: npm ci && node convert-to-js.js
-    startCommand: NODE_OPTIONS=--no-warnings node build/index.js
+    buildCommand: npm install
+    startCommand: node index.js
     nodeVersion: 18.19.1
     envVars:
       # Node.js Configuration (force CommonJS)
