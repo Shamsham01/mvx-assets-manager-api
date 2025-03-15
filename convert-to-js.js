@@ -70,11 +70,23 @@ function convertTsToJs(sourcePath, targetPath) {
   content = content.replace(/import packageJson from ['"]\.\.\/package\.json['"]/g, 
     "const packageJson = require('../package.json')");
   
-  // Fix rate limiting configuration (common issue in index.js)
-  content = content.replace(/windowMs: (\d+) \* (\d+) \* (\d+)/g, (match, p1, p2, p3) => {
-    const result = parseInt(p1) * parseInt(p2) * parseInt(p3);
-    return `windowMs: ${result}`;
-  });
+  // More aggressive fix for specific rate limiting pattern
+  if (sourcePath.includes('index.ts')) {
+    // Direct replacement of the rate limiting configuration
+    content = content.replace(
+      /const limiter = rateLimit\({\s*windowMs: (\d+) \* (\d+) \* (\d+),/g, 
+      (match, p1, p2, p3) => {
+        const result = parseInt(p1) * parseInt(p2) * parseInt(p3);
+        return `const limiter = rateLimit({\n  windowMs: ${result},`;
+      }
+    );
+    
+    // Add CommonJS header
+    content = "// @ts-nocheck\n// CommonJS module\n\"use strict\";\n" + content;
+    
+    // Insert an explicit module.exports at the end
+    content += "\n\n// Ensure this is treated as CommonJS\nmodule.exports = { app };\n";
+  }
   
   // Remove TypeScript type annotations
   // Remove type imports
@@ -108,9 +120,16 @@ function convertTsToJs(sourcePath, targetPath) {
     return `(${params.replace(/:\s*\w+(\[\])?/g, '').replace(/\s*\?\s*:/g, ':')})`;
   });
   
-  // Add CommonJS module marker to ensure Node treats it as CommonJS
+  // Convert ES imports to require for more compatibility
   if (sourcePath.includes('index.ts')) {
-    content = "// @ts-nocheck\n// CommonJS module\n" + content;
+    // Replace imports with require
+    content = content.replace(/import\s+(\w+)\s+from\s+['"]([^'"]+)['"]/g, 
+      "const $1 = require('$2')");
+    content = content.replace(/import\s+{\s*([\w\s,]+)\s*}\s+from\s+['"]([^'"]+)['"]/g, 
+      (match, imports, path) => {
+        const importList = imports.split(',').map(i => i.trim());
+        return `const { ${importList.join(', ')} } = require('${path}')`;
+      });
   }
   
   // Write the modified content to target file
@@ -120,9 +139,14 @@ function convertTsToJs(sourcePath, targetPath) {
 // Process the src directory
 processDirectory('src', 'build');
 
+// Create a .node-version file to force Node.js 18.19.1
+fs.writeFileSync('.node-version', '18.19.1');
+
 // Copy package.json to build directory with type: commonjs
 const packageJson = require('./package.json');
 packageJson.type = 'commonjs';
+// Ensure the engines field is set correctly
+packageJson.engines = { "node": "18.19.1" };
 fs.writeFileSync(path.join('build', 'package.json'), JSON.stringify(packageJson, null, 2));
 
 console.log('Conversion complete!'); 

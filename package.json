@@ -5,7 +5,7 @@
   "main": "build/index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node build/index.js",
+    "start": "NODE_OPTIONS='--no-warnings --experimental-modules' node build/index.js",
     "build": "node convert-to-js.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "lint": "eslint . --ext .ts",
@@ -52,6 +52,6 @@
     "typescript": "5.4.2"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "18.19.1"
   }
 }
