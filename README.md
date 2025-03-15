@@ -1,148 +1,173 @@
-# MultiversX Assets Manager API
+# Simple MultiversX API
 
-A RESTful API service for managing MultiversX blockchain assets, based on Buildo Begins. This API is designed to work with make.com custom apps and provides endpoints for token operations, smart contract interactions, and blockchain utilities.
+A streamlined API for interacting with the MultiversX blockchain, designed specifically for Make.com custom app integration.
 
-## Base URL
-```
-https://my-bulido-api.onrender.com
-```
+## Features
 
-## Authentication
-API uses API key authentication. Include your API key in the request headers:
-```
-X-API-Key: your-api-key
-```
+- Token-based authorization for Make.com integration
+- PEM wallet authentication for blockchain operations
+- Usage fee system with REWARD token
+- Whitelisting capability for trusted wallets
+- Herotag management and registration on MultiversX blockchain
 
-## Available Endpoints
+## Setup
 
-### Token Operations
+### Prerequisites
 
-#### ESDT (Fungible Tokens)
-- `POST /api/v1/esdt/issue` - Issue new ESDT token
-- `POST /api/v1/esdt/roles/set` - Set special roles for ESDT
-- `POST /api/v1/esdt/roles/unset` - Unset special roles for ESDT
-- `POST /api/v1/esdt/mint` - Mint ESDT tokens
-- `POST /api/v1/esdt/burn` - Burn ESDT tokens
-- `POST /api/v1/esdt/transfer` - Transfer ESDT tokens
-- `POST /api/v1/esdt/freeze` - Freeze ESDT tokens
-- `POST /api/v1/esdt/unfreeze` - Unfreeze ESDT tokens
-- `POST /api/v1/esdt/wipe` - Wipe ESDT tokens
-- `POST /api/v1/esdt/pause` - Pause ESDT transactions
-- `POST /api/v1/esdt/unpause` - Unpause ESDT transactions
+- Node.js 18.x or higher
 
-#### NFT Operations
-- `POST /api/v1/nft/issue` - Issue new NFT collection
-- `POST /api/v1/nft/roles/set` - Set special roles for NFT
-- `POST /api/v1/nft/roles/unset` - Unset special roles for NFT
-- `POST /api/v1/nft/create` - Create new NFT
-- `POST /api/v1/nft/transfer` - Transfer NFT
-
-#### SFT Operations
-- `POST /api/v1/sft/issue` - Issue new SFT collection
-- `POST /api/v1/sft/roles/set` - Set special roles for SFT
-- `POST /api/v1/sft/roles/unset` - Unset special roles for SFT
-- `POST /api/v1/sft/create` - Create new SFT
-- `POST /api/v1/sft/transfer` - Transfer SFT
-
-#### Meta ESDT Operations
-- `POST /api/v1/meta-esdt/issue` - Issue new Meta ESDT collection
-- `POST /api/v1/meta-esdt/roles/set` - Set special roles
-- `POST /api/v1/meta-esdt/roles/unset` - Unset special roles
-- `POST /api/v1/meta-esdt/create` - Create Meta ESDT
-- `POST /api/v1/meta-esdt/transfer` - Transfer Meta ESDT
-
-### Utility Endpoints
-- `POST /api/v1/utils/multi-transfer` - Transfer multiple tokens
-- `POST /api/v1/utils/decode-transaction` - Decode transaction data
-- `POST /api/v1/utils/herotag` - Create/check herotag
-- `GET /api/v1/utils/converters` - Data conversion utilities
-
-### Account Operations
-- `POST /api/v1/account/store` - Store key-value data
-- `POST /api/v1/account/claim-rewards` - Claim developer rewards
-- `POST /api/v1/account/change-owner` - Change contract owner
-
-## Request/Response Examples
-
-### Issue ESDT Token
-```json
-POST /api/v1/esdt/issue
-
-Request:
-{
-  "tokenName": "MyToken",
-  "tokenTicker": "MTK",
-  "initialSupply": "1000000000000000000",
-  "decimals": 18,
-  "canFreeze": true,
-  "canWipe": true,
-  "canPause": true,
-  "canMint": true,
-  "canBurn": true,
-  "canChangeOwner": true,
-  "canUpgrade": true,
-  "canAddSpecialRoles": true
-}
-
-Response:
-{
-  "success": true,
-  "data": {
-    "tokenIdentifier": "MTK-a1b2c3",
-    "transactionHash": "...",
-    "status": "success"
-  }
-}
-```
-
-## Error Handling
-The API uses standard HTTP status codes and returns error messages in the following format:
-```json
-{
-  "success": false,
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Error description"
-  }
-}
-```
-
-## Development Setup
+### Installation
 
 1. Clone the repository
-2. Install dependencies:
+```bash
+git clone https://github.com/yourusername/mvx-simple-api.git
+cd mvx-simple-api
+```
+
+2. Install dependencies
 ```bash
 npm install
 ```
 
-3. Create .env file:
+### Required Environment Variables
+
+The following environment variables are used by the application:
+
 ```
 PORT=3000
-API_KEY=your-api-key
-NETWORK=devnet  # or mainnet/testnet
-CUSTOM_API_URL=https://devnet-api.multiversx.com
+NODE_ENV=development/production
+SECURE_TOKEN=your-secure-token
+API_PROVIDER=https://gateway.multiversx.com
+CHAIN=mainnet
+
+# Usage Fee Configuration
+FIXED_USD_FEE=0.03
+REWARD_TOKEN=REWARD-cf6eac
+TREASURY_WALLET=your-treasury-wallet-address
 ```
 
-4. Run development server:
+These can be configured directly on Render.com or set locally for development.
+
+### Running the API
+
+#### Development
 ```bash
 npm run dev
 ```
 
-5. Build for production:
+#### Production
 ```bash
-npm run build
+npm start
 ```
+
+## API Endpoints
+
+### Health Check
+```
+GET /health
+```
+Returns the server status.
+
+### Authorization
+```
+POST /authorization
+```
+Authenticates a Make.com request via secure token.
+
+Headers:
+```
+Authorization: Bearer your-secure-token
+```
+
+Response:
+```json
+{
+  "status": "success",
+  "message": "Authorization successful"
+}
+```
+
+### Set Herotag
+```
+POST /setHerotag
+```
+Registers a herotag for a given address on the MultiversX blockchain.
+
+Headers:
+```
+Authorization: Bearer your-secure-token
+```
+
+Request body:
+```json
+{
+  "walletPem": "-----BEGIN PRIVATE KEY-----\n... PEM content ...\n-----END PRIVATE KEY-----",
+  "address": "erd1...",
+  "herotag": "myherotag"
+}
+```
+
+Response:
+```json
+{
+  "status": "success",
+  "data": {
+    "address": "erd1...",
+    "herotag": "myherotag.elrond",
+    "transactionHash": "blockchain-transaction-hash",
+    "timestamp": "2023-05-10T12:34:56.789Z",
+    "usageFeeHash": "usage-fee-transaction-hash-or-N/A"
+  }
+}
+```
+
+This endpoint performs the following actions:
+1. Validates the provided wallet ownership by checking the PEM file
+2. Verifies the herotag isn't already registered
+3. Creates and submits a blockchain transaction to register the herotag
+4. Returns the transaction hash for tracking
+
+Note: Registering a herotag is a blockchain operation that requires gas and is subject to the usage fee system.
+
+## Wallet Whitelisting
+
+You can whitelist wallets to bypass the usage fee by adding them to the `whitelist.json` file:
+
+```json
+[
+  {
+    "walletAddress": "erd1...",
+    "name": "Wallet Name",
+    "reason": "Reason for whitelisting",
+    "dateAdded": "2023-05-10T12:00:00.000Z"
+  }
+]
+```
+
+## Usage Fee System
+
+The API includes a usage fee system that charges users a small amount in REWARD tokens for each operation. The fee amount is calculated dynamically based on the current REWARD token price to maintain a fixed USD value (default: $0.03).
+
+Whitelisted wallets are exempt from the usage fee.
 
 ## Make.com Integration
 
-This API is designed to work seamlessly with make.com custom apps. Each endpoint corresponds to a module in your Make custom app. The request/response format is standardized to make integration straightforward.
+This API is designed to work seamlessly with Make.com custom apps:
 
-## Security Considerations
+1. In Make.com, create a new custom app
+2. Set up an authorization module using the `/authorization` endpoint with the SECURE_TOKEN
+3. Configure modules for each endpoint (e.g., setHerotag)
+4. Each module should include the wallet PEM as a field in the request body
 
-1. Always store sensitive data (PEM files, private keys) securely
-2. Use environment variables for configuration
-3. Implement rate limiting in production
-4. Monitor API usage and implement appropriate security measures
+## Deployment on Render
+
+This project includes a `render.yaml` file for easy deployment on Render.com:
+
+1. Connect your GitHub repository to Render
+2. The necessary environment variables are already configured in `render.yaml`
+3. For sensitive values like `SECURE_TOKEN` and `TREASURY_WALLET`, you'll need to set these manually in the Render dashboard after deployment
+4. Deploy your application
 
 ## License
+
 MIT

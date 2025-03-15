@@ -1,27 +1,28 @@
 services:
   - type: web
-    name: mvx-assets-manager-api
+    name: mvx-simple-api
     env: node
     plan: starter
-    buildCommand: |
-      npm ci && 
-      node scan-typescript-syntax.js &&
-      node fix-all-modules.js &&
-      node fix-index.js
+    buildCommand: npm ci
     startCommand: node index.js
-    nodeVersion: 18.19.1
+    nodeVersion: 18.x
     envVars:
       - key: PORT
         value: 3000
-      - key: API_KEY
-        sync: false
-      - key: PRIVATE_KEY
+      - key: SECURE_TOKEN
         sync: false
       - key: CHAIN
-        value: testnet
+        value: mainnet
       - key: NODE_ENV
         value: production
+      - key: API_PROVIDER
+        value: https://gateway.multiversx.com
+      - key: FIXED_USD_FEE
+        value: 0.03
+      - key: REWARD_TOKEN
+        value: REWARD-cf6eac
+      - key: TREASURY_WALLET
+        sync: false
     autoDeploy: true
-    region: frankfurt
-    healthCheckPath: /api/v1/utils/health
+    healthCheckPath: /health
     numInstances: 1 
